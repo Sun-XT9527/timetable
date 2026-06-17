@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的日程表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #faf9f7;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --accent: #e85d04;
+            --accent-light: #fff4ed;
+            --border: #eee;
+            --shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        body {
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .date-group {
+            margin-bottom: 24px;
+        }
+
+        .date-header {
+            font-size: 13px;
+            color: var(--text-secondary);
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 12px;
+        }
+
+        .event-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-bottom: 12px;
+        }
+
+        .event-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .time-block {
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .time-start {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .time-end {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /*
+        ============================================================
+        添加日程 —— 完整编辑规则
+        ============================================================
+
+        【步骤 1】定位到 <div class="schedule-list"> 内部
+          - 按日期分组：每个分组是一个 <div class="date-group">
+          - 分组头部：<div class="date-header">2026年6月X日 · 周X</div>
+          - 同一日内的多张日程卡片依次写在该 date-group 内
+
+          结构骨架：
+          <div class="date-group">
+              <div class="date-header">2026年6月18日 · 周四</div>
+              <div class="event-card" data-deadline="2026-06-18T08:00:00">
+                  ... 见下方 time-block / event-content ...
+              </div>
+              <!-- 同日内可继续追加 event-card -->
+          </div>
+
+        【步骤 2】写 event-card，必须设置 data-deadline（ISO 时间）
+          <div class="event-card" data-deadline="2026-06-18T08:00:00">
+              <!-- time-block：见步骤 3 -->
+              <!-- event-content：见步骤 4 -->
+          </div>
+
+          - data-deadline 用于自动计算倒计时；格式必须为
+            "YYYY-MM-DDTHH:MM:SS"（例如 "2026-06-24T23:59:00"）
+          - 即使是"全天/早上/下午"这种模糊时间，也要写一个合理的
+            截止时刻（例如早上 08:00、晚上 23:59），倒计时会按
+            time-single 规则以"天"显示
+
+        【步骤 3】time-block：两种规则，二选一
+
+        规则 A · 有明确起止时间（如 "09:00 - 10:30"）
+          <div class="time-block">
+              <div class="time-start">09:00</div>
+              <div class="time-end">10:30</div>
+          </div>
+          倒计时显示："还有 N天M小时" / "M小时N分" / "N分钟"
+
+        规则 B · 无详细时间（如 "全天"、"上午"、"下午"、
+                 "晚上"、"截止"）
+          <div class="time-block time-single">
+              <div>下午</div>
+          </div>
+          倒计时显示："还有 N天"（>=12 小时向上取整；当天显示"即将截止"）
+
+          注意：A / B 两种规则互斥，同一个 time-block 内只能选其一。
+
+        【步骤 4】event-content：标题 + 描述（描述可留空或省略）
+          <div class="event-content">
+              <div class="event-title">
+                  日程标题 <span class="countdown">--</span>
+              </div>
+              <div class="event-desc">补充说明（可留空或整个省略该 div）</div>
+          </div>
+
+          - <span class="countdown">--</span> 必须保留，由 JS 自动填入
+            倒计时文字；位置紧跟在标题文本末尾即可
+
+        【其他规则】
+        - 已过期的日程（当前时间超过 data-deadline）会自动隐藏
+          （display:none），但 HTML 源代码不删除，便于查阅或复用
+        - 如果一个 date-group 内所有 event-card 都已过期，则整个
+          date-group 也会自动隐藏，只保留未过期的分组在页面上
+        - 如需"取消隐藏"某个已过期日程：
+          方法 1 · 把该 event-card 的 data-deadline 改成未来时间
+          方法 2 · 在 CSS 中临时注释掉 .event-card.expired 和
+                   .date-group.expired 的 display:none 即可全部
+                   恢复显示，不会影响任何其他逻辑
+        ============================================================
+        */
+        .time-block.time-single {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+        }
+
+        .time-block.time-single > div {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .event-content {
+            flex: 1;
+        }
+
+        .event-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .event-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .countdown {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--accent);
+            background: var(--accent-light);
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+            margin-left: 12px;
+        }
+
+        .countdown.urgent {
+            color: #c62828;
+            background: #ffebee;
+        }
+
+        .countdown.passed {
+            color: var(--text-secondary);
+            background: #f0f0f0;
+        }
+
+        /*
+         * 已过期日程：
+         * 视觉上隐藏但保留源代码（便于以后查阅/恢复）
+         * 若某个 date-group 下的卡片全部过期，则整个 date-group 也一起隐藏
+         */
+        .event-card.expired {
+            display: none;
+        }
+
+        .date-group.expired {
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>我的日程表</h1>
+        </header>
+
+        <div class="schedule-list">
+
+            <div class="date-group">
+                <div class="date-header">2026年6月14日 · 周日</div>
+
+                <div class="event-card" data-deadline="2026-06-14T09:00:00">
+                    <div class="time-block">
+                        <div class="time-start">09:00</div>
+                        <div class="time-end">10:30</div>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-title">团队周会 <span class="countdown">--</span></div>
+                        <div class="event-desc">项目进度汇报与本周计划讨论</div>
+                    </div>
+                </div>
+
+                <div class="event-card" data-deadline="2026-06-14T14:00:00">
+                    <div class="time-block">
+                        <div class="time-start">14:00</div>
+                        <div class="time-end">15:00</div>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-title">健身训练 <span class="countdown">--</span></div>
+                        <div class="event-desc">健身房有氧+力量</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="date-group">
+                <div class="date-header">2026年6月15日 · 周一</div>
+
+                <div class="event-card" data-deadline="2026-06-15T10:00:00">
+                    <div class="time-block">
+                        <div class="time-start">10:00</div>
+                        <div class="time-end">11:30</div>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-title">客户方案评审 <span class="countdown">--</span></div>
+                        <div class="event-desc">新项目需求确认与方案讨论</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="date-group">
+                <div class="date-header">2026年6月16日 · 周二</div>
+
+                <div class="event-card" data-deadline="2026-06-16T08:30:00">
+                    <div class="time-block">
+                        <div class="time-start">08:30</div>
+                        <div class="time-end">09:30</div>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-title">英语口语课 <span class="countdown">--</span></div>
+                        <div class="event-desc">在线课程学习</div>
+                    </div>
+                </div>
+
+                <div class="event-card" data-deadline="2026-06-16T14:00:00">
+                    <div class="time-block">
+                        <div class="time-start">14:00</div>
+                        <div class="time-end">16:00</div>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-title">数据可视化考试 <span class="countdown">--</span></div>
+                        <div class="event-desc">期末考试</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="date-group">
+                <div class="date-header">2026年6月18日 · 周四</div>
+
+                <div class="event-card" data-deadline="2026-06-18T08:00:00">
+                    <div class="time-block time-single">
+                        <div>早上</div>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-title">运筹学第六章作业 <span class="countdown">--</span></div>
+                        <div class="event-desc">课本 P254 第 6 题</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="date-group">
+                <div class="date-header">2026年6月24日 · 周三</div>
+
+                <div class="event-card" data-deadline="2026-06-24T23:59:00">
+                    <div class="time-block time-single">
+                        <div>下午</div>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-title">数据采集第五次实验 <span class="countdown">--</span></div>
+                        <div class="event-desc">提交实验报告与代码（下周三晚上前）</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.event-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(10px)';
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 80);
+            });
+
+            function updateCountdowns() {
+                const now = new Date();
+                cards.forEach(card => {
+                    const deadlineStr = card.getAttribute('data-deadline');
+                    const countdownEl = card.querySelector('.countdown');
+                    if (!deadlineStr || !countdownEl) return;
+
+                    const isSingle = card.querySelector('.time-single') !== null;
+                    const deadline = new Date(deadlineStr);
+                    const diff = deadline - now;
+
+                    countdownEl.classList.remove('urgent', 'passed');
+
+                    if (diff <= 0) {
+                        countdownEl.textContent = '已结束';
+                        countdownEl.classList.add('passed');
+                        card.classList.add('expired');
+                        return;
+                    }
+                    card.classList.remove('expired');
+
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+                    let text;
+                    if (isSingle) {
+                        const displayDays = days + (hours >= 12 ? 1 : 0);
+                        if (displayDays <= 0) {
+                            text = '即将截止';
+                        } else if (displayDays === 1) {
+                            text = '还有 1天';
+                        } else {
+                            text = `还有 ${displayDays}天`;
+                        }
+                        if (days === 0) countdownEl.classList.add('urgent');
+                    } else {
+                        if (days > 0) {
+                            text = `还有 ${days}天${hours}小时`;
+                        } else if (hours > 0) {
+                            text = `还有 ${hours}小时${minutes}分`;
+                        } else {
+                            text = `还有 ${minutes}分钟`;
+                        }
+                        if (hours < 24 && days === 0) countdownEl.classList.add('urgent');
+                    }
+                    countdownEl.textContent = text;
+                });
+
+                // 如果一个 date-group 里所有卡片都已过期，连带隐藏该 date-group（源代码保留）
+                document.querySelectorAll('.date-group').forEach(group => {
+                    const groupCards = group.querySelectorAll('.event-card');
+                    const expiredCards = group.querySelectorAll('.event-card.expired');
+                    if (groupCards.length > 0 && groupCards.length === expiredCards.length) {
+                        group.classList.add('expired');
+                    } else {
+                        group.classList.remove('expired');
+                    }
+                });
+            }
+
+            updateCountdowns();
+            setInterval(updateCountdowns, 60000);
+        });
+    </script>
+</body>
+</html>
