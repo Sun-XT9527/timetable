@@ -1,1 +1,1 @@
-{"version": 1, "updated": "2026-06-18", "schedule": [{"id": 1, "task": "教评", "desc": "今晚完成教学评价", "date": "2026-06-18", "dayOfWeek": "周四", "timeLabel": "晚上", "deadlineISO": "2026-06-18T23:59:00"}]}
+{"version": 1, "updated": "2026-06-18", "schedule": [{"id": 1, "task": "教评", "desc": "今晚完成教学评价", "date": "2026-06-18", "dayOfWeek": "周四", "timeLabel": "晚上", "deadlineISO": "2026-06-18T23:59:00"}, {"id": 2, "task": "Java期末作业", "desc": "", "date": "2026-06-24", "dayOfWeek": "周三", "timeLabel": "截止", "deadlineISO": "2026-06-24T23:59:00"}]}
