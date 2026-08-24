@@ -161,9 +161,9 @@ textarea.inp{resize:vertical;min-height:64px}
 <div class="wrap">
 
   <section id="sec-overview" class="on">
-    <div class="sec-head"><h2>今天</h2><p id="ovDate"></p></div>
+    <div class="sec-head"><h2>概览</h2><p id="ovDate"></p></div>
     <div class="grid g3" id="ovStats"></div>
-    <div class="card" style="margin-top:14px"><h3>今天要处理 <span class="tag" id="ovTodoCount"></span></h3><div id="ovToday"></div></div>
+    <div class="card" style="margin-top:14px"><h3>最近日程 <span class="tag" id="ovTodoCount"></span></h3><div id="ovToday"></div></div>
     <div class="card"><h3>习惯打卡 · 今日</h3><div id="ovHabits"></div></div>
     <div class="card"><h3>本月消费</h3><div id="ovMoney"></div></div>
   </section>
@@ -313,16 +313,15 @@ async function loadOverview(){
     ]);
     setSync('ok');
     const today=todayStr(),thisMonth=monthStr(new Date());
-    const overdue=events.filter(e=>e.date<today&&!e.done);
-    const todayEvents=events.filter(e=>e.date===today&&!e.done);
+    const upcoming=events.filter(e=>e.date>=today&&!e.done).sort((a,b)=>a.date<b.date?-1:1);
     const pendShop=await api.list('shopping','select=*&status=eq.todo');
     const expThis=tx.filter(t=>t.type==='expense'&&t.date&&t.date.startsWith(thisMonth)).reduce((s,t)=>s+Number(t.amount),0);
-    $('#ovStats').innerHTML=statCard('今日日程',todayEvents.length+' 项','')+statCard('逾期未办',overdue.length+' 项',overdue.length?'exp':'')+statCard('待买',pendShop.length+' 件','')+statCard('本月支出',fmtMoney(expThis),'exp');
+    $('#ovStats').innerHTML=statCard('最近日程',upcoming.length+' 项','')+statCard('待买',pendShop.length+' 件','')+statCard('本月支出',fmtMoney(expThis),'exp');
 
-    const todo=[...overdue.map(e=>({...e,overdue:true})),...todayEvents];
-    $('#ovTodoCount').textContent=todo.length?('共 '+todo.length+' 项'):'今天很清爽';
-    $('#ovToday').innerHTML=todo.length?todo.map(e=>todayItem(e)).join(''):'<div class="empty">今天没有待办，也没有逾期</div>';
-    const cks=$$('#ovToday .ck');todo.forEach((e,i)=>{if(cks[i])cks[i].onclick=()=>withRetry(async()=>{await api.update('events',e.id,{done:true});loadOverview();});});
+    const nextN=upcoming.slice(0,5);
+    $('#ovTodoCount').textContent=upcoming.length?('未来 '+upcoming.length+' 项'):'暂无日程';
+    $('#ovToday').innerHTML=nextN.length?nextN.map(e=>todayItem(e)).join(''):'<div class="empty">还没有安排日程</div>';
+    const cks=$$('#ovToday .ck');nextN.forEach((e,i)=>{if(cks[i])cks[i].onclick=()=>withRetry(async()=>{await api.update('events',e.id,{done:true});loadOverview();});});
 
     const logMap={};logs.forEach(l=>logMap[l.habit_id]=l);
     $('#ovHabits').innerHTML=habits.length?habits.map(h=>{const l=logMap[h.id];const ok=h.type==='check'?!!l:(l?Number(l.value)>0:false);const v=l?(h.type==='check'?'✓':l.value+(h.unit||'')):'';return '<div class="row"><span class="ic" style="background:'+(h.color||'#8a5a3b')+'22;color:'+(h.color||'#8a5a3b')+'">'+iconSvg(h.icon)+'</span><div class="grow"><div class="t">'+esc(h.name)+'</div><div class="s">'+(h.type==='check'?'打卡':h.type==='count'?'计数':'数值')+(h.target?' · 目标 '+h.target:'')+'</div></div><span class="badge '+(ok?'done':'miss')+'">'+(ok?'已完成':'未完成')+'</span><span class="meta">'+v+'</span></div>';}).join(''):'<div class="empty">还没有习惯，去「习惯」页添加</div>';
@@ -336,7 +335,7 @@ async function loadOverview(){
     ['ovStats','ovToday','ovHabits','ovMoney'].forEach(id=>{const el=$('#'+id);el.innerHTML=stateBox(err);bindRetry(el,loadOverview);});
   }
 }
-function todayItem(e){const pr='<span class="prio p'+(e.priority||1)+'"></span>';const t=(e.time?' '+esc(e.time):'');return '<div class="today-item'+(e.done?' done':'')+(e.overdue?' overdue':'')+'">'+pr+'<div class="ck">✓</div><div class="grow"><div class="tt">'+esc(e.title)+'</div><div class="st">'+(e.overdue?'逾期 · ':'')+fmtDate(e.date)+t+'</div></div></div>';}
+function todayItem(e){const pr='<span class="prio p'+(e.priority||1)+'"></span>';const t=(e.time?' '+esc(e.time):'');return '<div class="today-item'+(e.done?' done':'')+'">'+pr+'<div class="ck">✓</div><div class="grow"><div class="tt">'+esc(e.title)+'</div><div class="st">'+fmtDate(e.date)+t+'</div></div></div>';}
 
 /* ================= 记账 ================= */
 let TX=[];let moneyFilterCat='all';
