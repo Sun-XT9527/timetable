@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>生活台</title>
+<title>个人工作台</title>
 <style>
 :root{
   --bg:#f6f3ee; --bg-soft:#fbf9f5; --panel:#fffdfa;
@@ -29,6 +29,7 @@ header{position:sticky;top:0;z-index:50;background:rgba(246,243,238,.92);backdro
 .brand .logo{width:30px;height:30px;border-radius:9px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff}
 .brand h1{font-size:17px;font-weight:650;letter-spacing:.5px}
 .sync{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
+.hd-act{display:flex;align-items:center;gap:10px}
 .sync .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3)}
 .sync.ok .dot{background:var(--green)}.sync.busy .dot{background:var(--gold);animation:pulse 1s infinite}.sync.err .dot{background:var(--red)}
 @keyframes pulse{50%{opacity:.35}}
@@ -143,9 +144,12 @@ textarea.inp{resize:vertical;min-height:64px}
   <div class="hd">
     <div class="brand">
       <div class="logo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11Z" stroke="currentColor" stroke-width="1.7"/><path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-      <h1>生活台</h1>
+      <h1>个人工作台</h1>
     </div>
-    <div class="sync" id="sync"><span class="dot"></span><span id="syncTxt">连接中…</span></div>
+    <div class="hd-act">
+      <div class="sync" id="sync"><span class="dot"></span><span id="syncTxt">连接中…</span></div>
+      <button class="btn ghost sm" id="refreshBtn" title="强制刷新"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>刷新</button>
+    </div>
   </div>
   <nav id="nav">
     <button class="tab on" data-t="overview">概览</button>
@@ -300,6 +304,8 @@ function iconSvg(name){const p='<svg width="16" height="16" viewBox="0 0 24 24" 
 $$('#nav .tab').forEach(t=>t.addEventListener('click',()=>{$$('#nav .tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');$$('section').forEach(s=>s.classList.remove('on'));$('#sec-'+t.dataset.t).classList.add('on');lazyLoad(t.dataset.t);}));
 const loaded={};const LOADERS={overview:loadOverview,money:loadMoney,habit:loadHabit,fitness:loadFitness,schedule:loadSchedule,shopping:loadShopping,media:loadMedia};
 function lazyLoad(t){if(loaded[t])return;loaded[t]=true;LOADERS[t]&&LOADERS[t]();}
+function forceRefresh(){Object.keys(loaded).forEach(k=>delete loaded[k]);const cur=$('#nav .tab.on');if(cur){setSync('busy');LOADERS[cur.dataset.t]&&LOADERS[cur.dataset.t]();}toast('已强制刷新');}
+$('#refreshBtn').onclick=forceRefresh;
 
 /* ================= 概览 ================= */
 async function loadOverview(){
