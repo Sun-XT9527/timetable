@@ -91,6 +91,8 @@ section.on{display:block}
 @keyframes slL{from{transform:translateX(-48px);opacity:0}to{transform:translateX(0);opacity:1}}
 .sl-r{animation:slR .3s cubic-bezier(.4,0,.2,1)}
 .sl-l{animation:slL .3s cubic-bezier(.4,0,.2,1)}
+.card.clickable{cursor:pointer;transition:transform .12s ease}
+.card.clickable:active{transform:scale(.985)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;border-radius:10px;font-size:14px;font-weight:550;min-height:42px;transition:background .15s}
 .btn.primary{background:var(--accent);color:#fff}.btn.primary:hover{background:#7a4f33}
 .btn.ghost{background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-2)}.btn.ghost:hover{background:var(--line-soft)}
@@ -185,7 +187,6 @@ textarea.inp{resize:vertical;min-height:64px}
   <nav id="nav">
     <button class="tab on" data-t="overview">概览</button>
     <button class="tab" data-t="money">记账</button>
-    <button class="tab" data-t="habit">习惯</button>
     <button class="tab" data-t="fitness">健身</button>
     <button class="tab" data-t="schedule">日程</button>
     <button class="tab" data-t="shopping">待买</button>
@@ -198,9 +199,9 @@ textarea.inp{resize:vertical;min-height:64px}
   <section id="sec-overview" class="on">
     <div class="sec-head"><h2>概览</h2><p id="ovDate"></p></div>
     <div class="grid g3" id="ovStats"></div>
-    <div class="card" style="margin-top:14px"><h3>近两周 <span class="tag">本周 + 下周</span></h3><div class="mini-cal" id="ovCal"></div></div>
-    <div class="card" style="margin-top:14px"><h3>最近日程 <span class="tag" id="ovTodoCount"></span></h3><div id="ovToday"></div></div>
-    <div class="card"><h3>本月消费</h3><div id="ovMoney"></div></div>
+    <div class="card clickable" style="margin-top:14px" data-goto="schedule"><h3>近两周 <span class="tag">本周 + 下周</span></h3><div class="mini-cal" id="ovCal"></div></div>
+    <div class="card clickable" style="margin-top:14px" data-goto="schedule"><h3>最近日程 <span class="tag" id="ovTodoCount"></span></h3><div id="ovToday"></div></div>
+    <div class="card clickable" data-goto="money"><h3>本月消费</h3><div id="ovMoney"></div></div>
   </section>
 
   <section id="sec-money">
@@ -221,15 +222,6 @@ textarea.inp{resize:vertical;min-height:64px}
       <div style="display:flex;gap:8px;margin-bottom:4px"><button class="btn primary" id="moneyAddBtn">＋ 记一笔</button></div>
       <div id="moneyList"></div>
     </div>
-  </section>
-
-  <section id="sec-habit">
-    <div class="sec-head"><h2>习惯健康</h2></div>
-    <div class="card"><h3>我的习惯 <span class="tag">勾选 / 计数 / 数值</span></h3>
-      <div style="display:flex;gap:8px;margin-bottom:6px"><button class="btn primary" id="habitAddBtn">＋ 新习惯</button></div>
-      <div id="habitList"></div>
-    </div>
-    <div class="card"><h3>近 30 天热力图</h3><div id="heatWrap"></div></div>
   </section>
 
   <section id="sec-fitness">
@@ -328,13 +320,14 @@ async function withRetry(fn){try{await fn();setSync('ok');}catch(err){setSync('e
 function openModal(t,h){$('#modalTitle').textContent=t;$('#modalBody').innerHTML=h;$('#modal').classList.add('on');}
 function closeModal(){$('#modal').classList.remove('on');$('#modalBody').innerHTML='';}
 function skeleton(n){let h='';for(let i=0;i<n;i++)h+='<div class="sk-row" style="padding:12px 0"><div class="skeleton" style="width:60%;margin-bottom:8px"></div><div class="skeleton" style="width:35%"></div></div>';return h;}
-function statCard(l,v,c){return '<div class="card" style="padding:14px 16px"><div class="stat"><span class="v '+(c||'')+'">'+v+'</span><span class="l">'+l+'</span></div></div>';}
+function statCard(l,v,c,g){return '<div class="card clickable" style="padding:14px 16px" data-goto="'+(g||'')+'"><div class="stat"><span class="v '+(c||'')+'">'+v+'</span><span class="l">'+l+'</span></div></div>';}
 function iconSvg(name){const p='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">';const d={spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/>',water:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>',run:'<circle cx="13" cy="5" r="2"/><path d="M9 20l3-6 3 1 2 4"/><path d="M4 14l3 2 2-4"/>',book:'<path d="M4 5a2 2 0 0 1 2-2h14v18H6a2 2 0 0 1-2-2V5z"/><path d="M8 7h8"/>',sleep:'<path d="M20 13a8 8 0 1 1-9-9 6 6 0 0 0 9 9z"/>',heart:'<path d="M12 21S4 14.5 4 8.8A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 8 2.8C20 14.5 12 21 12 21z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',leaf:'<path d="M4 20c0-8 6-14 16-14 0 10-6 16-14 16z"/><path d="M4 20c3-6 8-9 12-11"/>',dumbbell:'<path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/>',apple:'<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/><path d="M12 8c0-3 2-4 2-6M11 3c0 1-2 2-2 4"/>',pen:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>'};return p+(d[name]||d.spark)+'</svg>';}
 
 /* ================= 导航 ================= */
-const loaded={};const LOADERS={overview:loadOverview,money:loadMoney,habit:loadHabit,fitness:loadFitness,schedule:loadSchedule,shopping:loadShopping,media:loadMedia};
+const loaded={};const LOADERS={overview:loadOverview,money:loadMoney,fitness:loadFitness,schedule:loadSchedule,shopping:loadShopping,media:loadMedia};
 function lazyLoad(t){if(loaded[t])return;loaded[t]=true;LOADERS[t]&&LOADERS[t]();}
 function switchTab(t,dir){if(t.classList.contains('on'))return;$$('#nav .tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');const sec=$('#sec-'+t.dataset.t);$$('section').forEach(s=>{s.classList.remove('on');s.classList.remove('sl-r','sl-l');});sec.classList.add('on');sec.classList.add(dir<0?'sl-l':'sl-r');t.scrollIntoView({inline:'center',block:'nearest'});lazyLoad(t.dataset.t);}
+function goTab(n){const t=[...$$('#nav .tab')].find(x=>x.dataset.t===n);if(t)switchTab(t,1);}
 $$('#nav .tab').forEach(t=>t.addEventListener('click',()=>{const tabs=[...$$('#nav .tab')];const cur=tabs.findIndex(x=>x.classList.contains('on'));switchTab(t,tabs.indexOf(t)-cur);}));
 let _sx=0,_sy=0,_swipeOk=true;
 document.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;_sx=e.touches[0].clientX;_sy=e.touches[0].clientY;_swipeOk=!e.target.closest('#nav');},{passive:true});
@@ -355,7 +348,7 @@ async function loadOverview(){
     const upcoming=events.filter(e=>e.date>=today&&!e.done).sort((a,b)=>a.date<b.date?-1:1);
     const pendShop=await api.list('shopping','select=*&status=eq.todo');
     const expThis=tx.filter(t=>t.type==='expense'&&t.date&&t.date.startsWith(thisMonth)).reduce((s,t)=>s+Number(t.amount),0);
-    $('#ovStats').innerHTML=statCard('最近日程',upcoming.length+' 项','')+statCard('待买',pendShop.length+' 件','')+statCard('本月支出',fmtMoney(expThis),'exp');
+    $('#ovStats').innerHTML=statCard('最近日程',upcoming.length+' 项','','schedule')+statCard('待买',pendShop.length+' 件','','shopping')+statCard('本月支出',fmtMoney(expThis),'exp','money');
     renderOvCal(events);
 
     const nextN=upcoming.slice(0,5);
@@ -368,6 +361,7 @@ async function loadOverview(){
     const inc=tx.filter(t=>t.type==='income'&&t.date&&t.date.startsWith(thisMonth));
     const eSum=exp.reduce((s,t)=>s+Number(t.amount),0),iSum=inc.reduce((s,t)=>s+Number(t.amount),0);
     $('#ovMoney').innerHTML='<div class="grid g2"><div class="stat"><span class="v exp">'+fmtMoney(eSum)+'</span><span class="l">本月支出</span></div><div class="stat"><span class="v inc">'+fmtMoney(iSum)+'</span><span class="l">本月收入</span></div></div>';
+    $$('#sec-overview .card.clickable').forEach(c=>c.onclick=(ev)=>{if(ev.target.closest('.mc-day')||ev.target.closest('.ev-head')||ev.target.closest('.ck'))return;goTab(c.dataset.goto);});
   }catch(err){
     setSync('err');
     ['ovStats','ovToday','ovMoney'].forEach(id=>{const el=$('#'+id);el.innerHTML=stateBox(err);bindRetry(el,loadOverview);});
@@ -406,74 +400,6 @@ function renderMoneyList(){const list=TX.filter(t=>moneyFilterCat==='all'||t.cat
 function moneyAddModal(){const cats=['餐饮','交通','购物','居住','娱乐','医疗','学习','人情','其他'];openModal('记一笔','<div class="seg" id="mtype" style="margin-bottom:12px"><button data-t="expense" class="on">支出</button><button data-t="income">收入</button></div><div class="field"><label>金额 (¥)</label><input class="inp" id="mAmount" type="number" inputmode="decimal" placeholder="0.00"></div><div class="field"><label>分类</label><div class="chips" id="mCat"></div><input class="inp" id="mCatInp" style="margin-top:6px" placeholder="或自定义分类"></div><div class="field"><label>日期</label><input class="inp" id="mDate" type="date" value="'+todayStr()+'"></div><div class="field"><label>备注</label><input class="inp" id="mNote" placeholder="可选"></div><button class="btn primary block" id="mSave">保存</button>');let mtype='expense';function renderCat(){$('#mCat').innerHTML=cats.map(c=>'<button class="chip" data-c="'+c+'">'+c+'</button>').join('');$$('#mCat .chip').forEach(b=>b.onclick=()=>{$('#mCatInp').value=b.dataset.c;$$('#mCat .chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');});}renderCat();$$('#mtype button').forEach(b=>b.onclick=()=>{mtype=b.dataset.t;$$('#mtype button').forEach(x=>x.classList.remove('on'));b.classList.add('on');});$('#mSave').onclick=()=>{const amount=parseFloat($('#mAmount').value);if(!amount){toast('请填写金额');return;}const cat=$('#mCatInp').value||'其他';const btn=$('#mSave');btn.disabled=true;btn.textContent='保存中…';withRetry(async()=>{await api.insert('transactions',{amount,type:mtype,category:cat,note:$('#mNote').value||null,date:$('#mDate').value||todayStr()});closeModal();loadMoney();toast('已保存');}).finally(()=>{btn.disabled=false;btn.textContent='保存';});};}
 $('#moneyAddBtn').onclick=moneyAddModal;
 $('#budgetSave').onclick=()=>{const v=parseFloat($('#budgetTotal').value);if(!v){toast('请填写预算金额');return;}withRetry(async()=>{const ex=await api.list('budgets','select=*&month=eq.'+monthStr(new Date())+'&category=eq.total');const rec=ex&&ex[0];if(rec)await api.update('budgets',rec.id,{amount:v});else await api.insert('budgets',{month:monthStr(new Date()),category:'total',amount:v});toast('预算已保存');loadMoney();});};
-
-/* ================= 习惯 ================= */
-let HABITS=[];let HLOG=[];
-async function loadHabit(){
-  $('#habitList').innerHTML=skeleton(4);
-  try{
-    const d=new Date();d.setDate(d.getDate()-29);
-    const since=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    [HABITS,HLOG]=await Promise.all([
-      api.list('habits','select=*&order=created_at.asc'),
-      api.list('habit_logs','select=*&date=gte.'+since+'&order=date.asc'),
-    ]);
-    setSync('ok');
-    renderHabitList();renderHeat();
-  }catch(err){setSync('err');const el=$('#habitList');el.innerHTML=stateBox(err);bindRetry(el,loadHabit);}
-}
-function logOf(habitId,date){return HLOG.find(l=>l.habit_id===habitId&&l.date===date);}
-function renderHabitList(){
-  const el=$('#habitList');const active=HABITS.filter(h=>!h.archived);
-  if(!active.length){el.innerHTML='<div class="empty">还没有习惯，点「新习惯」添加第一个</div>';return;}
-  const today=todayStr();
-  el.innerHTML=active.map(h=>{
-    const l=logOf(h.id,today);
-    const val=l?Number(l.value):0;
-    const ok=h.type==='check'?!!l:(l?val>0:false);
-    let act='';
-    if(h.type==='check'){act='<button class="btn '+(ok?'primary':'ghost')+' sm act-toggle" data-id="'+h.id+'" data-has="'+(ok?1:0)+'">'+(ok?'已完成':'打卡')+'</button>';}
-    else if(h.type==='count'){act='<button class="btn ghost sm act-minus" data-id="'+h.id+'">−</button><span class="meta" style="font-size:15px;font-weight:650">'+val+(h.unit||'')+'</span><button class="btn primary sm act-plus" data-id="'+h.id+'">＋</button>';}
-    else{act='<button class="btn '+(ok?'ghost':'primary')+' sm act-val" data-id="'+h.id+'">'+(ok?val+(h.unit||''):'记一笔')+'</button>';}
-    const pct=h.target&&h.target>0?Math.min(100,Math.round(val/h.target*100)):null;
-    return '<div class="habit"><span class="ic" style="background:'+(h.color||'#8a5a3b')+'22;color:'+(h.color||'#8a5a3b')+'">'+iconSvg(h.icon)+'</span><div class="grow"><div class="nm">'+esc(h.name)+'</div><div class="sub">'+(h.type==='check'?'每日打卡':h.type==='count'?'计数'+(h.target?' · 目标 '+h.target:'')+'次':'数值'+(h.target?' · 目标 '+h.target:''))+'</div>'+(pct!=null?'<div style="height:4px;background:var(--line-soft);border-radius:2px;margin-top:6px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+h.color+';border-radius:2px"></div></div>':'')+'</div><div class="act">'+act+'<button class="btn danger sm" data-del="'+h.id+'" title="删除">✕</button></div></div>';
-  }).join('');
-  $$('#habitList .act-toggle').forEach(b=>b.onclick=()=>withRetry(async()=>{if(b.dataset.has==='1'){const l=logOf(b.dataset.id,today);if(l)await api.remove('habit_logs',l.id);}else{await api.insert('habit_logs',{habit_id:b.dataset.id,date:today,value:1});}loadHabit();}));
-  $$('#habitList .act-plus').forEach(b=>b.onclick=()=>withRetry(async()=>{const l=logOf(b.dataset.id,today);if(l)await api.update('habit_logs',l.id,{value:Number(l.value)+1});else await api.insert('habit_logs',{habit_id:b.dataset.id,date:today,value:1});loadHabit();}));
-  $$('#habitList .act-minus').forEach(b=>b.onclick=()=>withRetry(async()=>{const l=logOf(b.dataset.id,today);if(l&&Number(l.value)>0){const nv=Number(l.value)-1;if(nv<=0)await api.remove('habit_logs',l.id);else await api.update('habit_logs',l.id,{value:nv});}loadHabit();}));
-  $$('#habitList .act-val').forEach(b=>b.onclick=()=>{const h=HABITS.find(x=>x.id===b.dataset.id);const l=logOf(h.id,today);openModal(h.name,'<div class="field"><label>今日'+(h.unit||'数值')+'</label><input class="inp" id="hv" type="number" inputmode="decimal" step="any" value="'+(l?l.value:'')+'" placeholder="'+(h.unit||'数值')+'"></div><button class="btn primary block" id="hvSave">保存</button>');$('#hvSave').onclick=()=>withRetry(async()=>{const v=parseFloat($('#hv').value);if(isNaN(v)){toast('请输入数值');return;}if(l)await api.update('habit_logs',l.id,{value:v});else await api.insert('habit_logs',{habit_id:h.id,date:today,value:v});closeModal();loadHabit();});});
-  $$('#habitList [data-del]').forEach(b=>b.onclick=()=>withRetry(async()=>{if(confirm('删除这个习惯？打卡记录也会一起删除')){await api.remove('habits',b.dataset.del);loadHabit();}}));
-}
-function renderHeat(){
-  const el=$('#heatWrap');const active=HABITS.filter(h=>!h.archived);
-  if(!active.length){el.innerHTML='<div class="empty">添加习惯后这里会显示 30 天热力图</div>';return;}
-  const dates=[];for(let i=29;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);dates.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));}
-  el.innerHTML=active.map(h=>{
-    const cells=dates.map(dt=>{const l=logOf(h.id,dt);if(!l)return '<span class="cell"></span>';const v=Number(l.value);const t=h.target||1;const r=v/t;const f=r>=1?'f4':r>=0.6?'f3':r>=0.3?'f2':'f1';return '<span class="cell '+f+'" title="'+dt+' · '+v+'"></span>';}).join('');
-    return '<div style="margin-bottom:12px"><div style="font-size:13px;font-weight:600;margin-bottom:6px">'+esc(h.name)+'</div><div class="heat">'+cells+'</div></div>';
-  }).join('');
-}
-function habitAddModal(){
-  const icons=[['spark','火花'],['water','喝水'],['run','运动'],['book','读书'],['sleep','睡眠'],['heart','心情'],['sun','早起'],['moon','早睡'],['leaf','冥想'],['dumbbell','健身'],['apple','饮食'],['pen','写作']];
-  openModal('新习惯',
-    '<div class="field"><label>名称</label><input class="inp" id="hName" placeholder="如：喝水、跑步"></div>'+
-    '<div class="field"><label>类型</label><div class="seg" id="hType"><button data-t="check" class="on">勾选</button><button data-t="count">计数</button><button data-t="value">数值</button></div></div>'+
-    '<div class="field" id="hTargetWrap" style="display:none"><label>每日目标</label><input class="inp" id="hTarget" type="number" inputmode="decimal" placeholder="可选"></div>'+
-    '<div class="field" id="hUnitWrap" style="display:none"><label>单位</label><input class="inp" id="hUnit" placeholder="如：次 / ml / 小时"></div>'+
-    '<div class="field"><label>图标</label><div class="chips" id="hIcon"></div></div>'+
-    '<div class="field"><label>颜色</label><div class="chips" id="hColor"></div></div>'+
-    '<button class="btn primary block" id="hSave">添加</button>');
-  let htype='check';
-  const colors=['#8a5a3b','#b98b60','#4a7a5c','#6b7d8c','#c29a4b','#b8573f','#7d8a6b'];
-  $('#hIcon').innerHTML=icons.map(i=>'<button class="chip" data-i="'+i[0]+'">'+iconSvg(i[0])+' '+i[1]+'</button>').join('');
-  $('#hColor').innerHTML=colors.map(c=>'<button class="chip" data-c="'+c+'" style="background:'+c+'22"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+c+'"></span></button>').join('');
-  let hicon='spark',hcolor=colors[0];
-  $$('#hIcon .chip').forEach(b=>b.onclick=()=>{hicon=b.dataset.i;$$('#hIcon .chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
-  $$('#hColor .chip').forEach(b=>b.onclick=()=>{hcolor=b.dataset.c;$$('#hColor .chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
-  $$('#hType button').forEach(b=>b.onclick=()=>{htype=b.dataset.t;$$('#hType button').forEach(x=>x.classList.remove('on'));b.classList.add('on');$('#hTargetWrap').style.display=htype==='check'?'none':'block';$('#hUnitWrap').style.display=htype==='check'?'none':'block';});
-  $('#hSave').onclick=()=>withRetry(async()=>{const name=$('#hName').value.trim();if(!name){toast('请填写名称');return;}await api.insert('habits',{name,type:htype,target:htype==='check'?null:parseFloat($('#hTarget').value)||null,unit:htype==='check'?null:$('#hUnit').value||null,icon:hicon,color:hcolor});closeModal();loadHabit();toast('已添加');});
-}
-$('#habitAddBtn').onclick=habitAddModal;
 
 /* ================= 健身 ================= */
 let FLOGS=[];let FSET={};
