@@ -66,6 +66,14 @@ section.on{display:block}
 .ev-detail-inner{margin:0 2px 10px;padding:11px 13px;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;box-shadow:inset 0 1px 3px rgba(0,0,0,.04);font-size:13px;color:var(--ink-2);line-height:1.6;white-space:pre-wrap}
 .ev-arrow{color:var(--ink-3);flex:0 0 auto;transition:transform .3s ease}
 .ev-item.open .ev-arrow{transform:rotate(180deg)}
+.mini-cal{display:flex;flex-direction:column;gap:8px}
+.mc-week{display:flex;gap:4px}
+.mc-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 0 5px;border-radius:9px}
+.mc-w{font-size:11px;color:var(--ink-3)}
+.mc-d{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:550;color:var(--ink-2)}
+.mc-day.today .mc-d{background:var(--accent);color:#fff;font-weight:700}
+.mc-day.has .mc-d{border:1.6px solid var(--accent);color:var(--accent);font-weight:600}
+.mc-day.today.has .mc-d{background:var(--accent);color:#fff;box-shadow:0 0 0 2px var(--accent-soft)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;border-radius:10px;font-size:14px;font-weight:550;min-height:42px;transition:background .15s}
 .btn.primary{background:var(--accent);color:#fff}.btn.primary:hover{background:#7a4f33}
 .btn.ghost{background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-2)}.btn.ghost:hover{background:var(--line-soft)}
@@ -173,6 +181,7 @@ textarea.inp{resize:vertical;min-height:64px}
   <section id="sec-overview" class="on">
     <div class="sec-head"><h2>概览</h2><p id="ovDate"></p></div>
     <div class="grid g3" id="ovStats"></div>
+    <div class="card" style="margin-top:14px"><h3>近两周 <span class="tag">本周 + 下周</span></h3><div class="mini-cal" id="ovCal"></div></div>
     <div class="card" style="margin-top:14px"><h3>最近日程 <span class="tag" id="ovTodoCount"></span></h3><div id="ovToday"></div></div>
     <div class="card"><h3>习惯打卡 · 今日</h3><div id="ovHabits"></div></div>
     <div class="card"><h3>本月消费</h3><div id="ovMoney"></div></div>
@@ -333,11 +342,13 @@ async function loadOverview(){
     const pendShop=await api.list('shopping','select=*&status=eq.todo');
     const expThis=tx.filter(t=>t.type==='expense'&&t.date&&t.date.startsWith(thisMonth)).reduce((s,t)=>s+Number(t.amount),0);
     $('#ovStats').innerHTML=statCard('最近日程',upcoming.length+' 项','')+statCard('待买',pendShop.length+' 件','')+statCard('本月支出',fmtMoney(expThis),'exp');
+    renderOvCal(events);
 
     const nextN=upcoming.slice(0,5);
     $('#ovTodoCount').textContent=upcoming.length?('未来 '+upcoming.length+' 项'):'暂无日程';
     $('#ovToday').innerHTML=nextN.length?nextN.map(e=>todayItem(e)).join(''):'<div class="empty">还没有安排日程</div>';
     const cks=$$('#ovToday .ck');nextN.forEach((e,i)=>{if(cks[i])cks[i].onclick=()=>withRetry(async()=>{await api.update('events',e.id,{done:true});loadOverview();});});
+    $$('#ovToday .ev-head').forEach(h=>h.onclick=(ev)=>{if(ev.target.closest('.ck'))return;h.parentElement.classList.toggle('open');});
 
     const logMap={};logs.forEach(l=>logMap[l.habit_id]=l);
     $('#ovHabits').innerHTML=habits.length?habits.map(h=>{const l=logMap[h.id];const ok=h.type==='check'?!!l:(l?Number(l.value)>0:false);const v=l?(h.type==='check'?'✓':l.value+(h.unit||'')):'';return '<div class="row"><span class="ic" style="background:'+(h.color||'#8a5a3b')+'22;color:'+(h.color||'#8a5a3b')+'">'+iconSvg(h.icon)+'</span><div class="grow"><div class="t">'+esc(h.name)+'</div><div class="s">'+(h.type==='check'?'打卡':h.type==='count'?'计数':'数值')+(h.target?' · 目标 '+h.target:'')+'</div></div><span class="badge '+(ok?'done':'miss')+'">'+(ok?'已完成':'未完成')+'</span><span class="meta">'+v+'</span></div>';}).join(''):'<div class="empty">还没有习惯，去「习惯」页添加</div>';
@@ -351,7 +362,8 @@ async function loadOverview(){
     ['ovStats','ovToday','ovHabits','ovMoney'].forEach(id=>{const el=$('#'+id);el.innerHTML=stateBox(err);bindRetry(el,loadOverview);});
   }
 }
-function todayItem(e){const pr='<span class="prio p'+(e.priority||1)+'"></span>';const t=(e.time?' '+esc(e.time):'');return '<div class="today-item'+(e.done?' done':'')+'">'+pr+'<div class="ck">✓</div><div class="grow"><div class="tt">'+esc(e.title)+'</div><div class="st">'+fmtDate(e.date)+t+'</div></div></div>';}
+function todayItem(e){const pr='<span class="prio p'+(e.priority||1)+'"></span>';const t=(e.time?' '+esc(e.time):'');return '<div class="ev-item"><div class="today-item ev-head'+(e.done?' done':'')+'">'+pr+'<div class="ck">✓</div><div class="grow"><div class="tt">'+esc(e.title)+'</div><div class="st">'+fmtDate(e.date)+t+'</div></div><svg class="ev-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="ev-detail"><div class="ev-detail-inner">'+(e.note?esc(e.note):'<span style="color:var(--ink-3)">暂无备注</span>')+'</div></div></div>';}
+function renderOvCal(events){const set=new Set(events.map(e=>e.date));const now=new Date();const dow=(now.getDay()+6)%7;const mon=new Date(now.getFullYear(),now.getMonth(),now.getDate()-dow);const W=['一','二','三','四','五','六','日'];let html='';for(let w=0;w<2;w++){html+='<div class="mc-week">';for(let i=0;i<7;i++){const d=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+w*7+i);const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');const cls='mc-day'+(ds===todayStr()?' today':'')+(set.has(ds)?' has':'');html+='<div class="'+cls+'"><div class="mc-w">'+W[i]+'</div><div class="mc-d">'+d.getDate()+'</div></div>';}html+='</div>';}$('#ovCal').innerHTML=html;}
 
 /* ================= 记账 ================= */
 let TX=[];let moneyFilterCat='all';
